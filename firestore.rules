@@ -1,18 +1,89 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Multi-tenant rules - users can only access their tenant's data
-    match /tenants/{tenantId} {
-      allow read, write: if request.auth != null && request.auth.token.tenantId == tenantId;
-      
-      match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.token.tenantId == tenantId;
-      }
+    
+    // Helper functions for role checking
+    function isAuthenticated() {
+      return request.auth != null;
     }
     
-    // User profile data
+    function belongsToTenant(tenantId) {
+      return isAuthenticated() && request.auth.token.tenantId == tenantId;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+    
+    function isAdminOrStaff() {
+      return isAuthenticated() && request.auth.token.role in ['admin', 'staff'];
+    }
+    
+    // Tenants collection - only accessible by tenant admins and staff
+    match /tenants/{tenantId} {
+      allow read: if belongsToTenant(tenantId);
+      allow write: if belongsToTenant(tenantId) && isAdminOrStaff();
+    }
+    
+    // Calendars collection - tenant-scoped access with role restrictions
+    match /calendars/{calendarId} {
+      allow read: if isAuthenticated() && 
+                     resource.data.tenantId == request.auth.token.tenantId;
+      allow create: if isAuthenticated() && 
+                       request.resource.data.tenantId == request.auth.token.tenantId &&
+                       isAdminOrStaff();
+      allow update, delete: if isAuthenticated() && 
+                              resource.data.tenantId == request.auth.token.tenantId &&
+                              isAdminOrStaff();
+    }
+    
+    // Reservations collection - tenant-scoped with user and role restrictions
+    match /reservations/{reservationId} {
+      allow read: if isAuthenticated() && 
+                     resource.data.tenantId == request.auth.token.tenantId;
+      
+      allow create: if isAuthenticated() && 
+                       request.resource.data.tenantId == request.auth.token.tenantId &&
+                       request.resource.data.userId == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+                       resource.data.tenantId == request.auth.token.tenantId &&
+                       (
+                         // Users can update their own reservations (limited fields)
+                         (resource.data.userId == request.auth.uid && 
+                          onlyUpdating(['details', 'status']) &&
+                          request.resource.data.status in ['pending', 'cancelled']) ||
+                         // Staff and admins can update any reservation
+                         isAdminOrStaff()
+                       );
+      
+      allow delete: if isAuthenticated() && 
+                       resource.data.tenantId == request.auth.token.tenantId &&
+                       (resource.data.userId == request.auth.uid || isAdminOrStaff());
+    }
+    
+    // Users collection - self-access and tenant admin access
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == userId || 
+                      (resource.data.tenantId == request.auth.token.tenantId && isAdminOrStaff()));
+      
+      allow create: if isAuthenticated() && 
+                       request.auth.uid == userId &&
+                       request.resource.data.tenantId == request.auth.token.tenantId;
+      
+      allow update: if isAuthenticated() && 
+                       (request.auth.uid == userId ||
+                        (resource.data.tenantId == request.auth.token.tenantId && hasRole('admin')));
+      
+      allow delete: if isAuthenticated() && 
+                       resource.data.tenantId == request.auth.token.tenantId && 
+                       hasRole('admin');
+    }
+    
+    // Helper function to check if only specific fields are being updated
+    function onlyUpdating(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
   }
 }

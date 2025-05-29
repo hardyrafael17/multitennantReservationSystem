@@ -13,6 +13,7 @@ This is a **multi-tenant reservation system** built with Firebase services, desi
 - [Security Model](#security-model)
 - [Development Guidelines](#development-guidelines)
 - [Deployment Instructions](#deployment-instructions)
+- [Firestore Collections & Document Structures](#firestore-collections--document-structures)
 
 ---
 
@@ -114,30 +115,18 @@ Firestore Database Structure:
 
 ## 🔒 Security Model
 
-### **Firestore Security Rules**
-```javascript
-// Multi-tenant access control
-match /tenants/{tenantId} {
-  allow read, write: if request.auth != null && 
-                        request.auth.token.tenantId == tenantId;
-  
-  match /{document=**} {
-    allow read, write: if request.auth != null && 
-                          request.auth.token.tenantId == tenantId;
-  }
-}
-
-// User profile access
-match /users/{userId} {
-  allow read, write: if request.auth != null && 
-                        request.auth.uid == userId;
-}
-```
-
-### **Authentication Strategy**
-- **Custom Claims**: Users have `tenantId` in their JWT token
+### **Multi-Tenant Authentication Strategy**
+- **Custom Claims**: Users have `tenantId` and `role` in their JWT token
 - **Tenant Assignment**: Users are assigned to tenants during registration
-- **Role Management**: Additional roles (admin, user, viewer) stored in custom claims
+- **Role Management**: Three roles supported - `admin`, `staff`, `user`
+
+### **Firestore Security Rules Implementation**
+The security rules enforce strict tenant isolation and role-based access control. Key features:
+
+- **Tenant Isolation**: Users can only access data for their assigned tenant
+- **Role-Based Access**: Different permissions for admin, staff, and regular users
+- **Resource Protection**: Calendars and reservations have appropriate read/write restrictions
+- **Self-Service**: Users can manage their own profiles and reservations with limitations
 
 ---
 
@@ -145,12 +134,7 @@ match /users/{userId} {
 
 ### **🚨 IMPORTANT: Architecture Update Policy**
 
-> **⚠️ CRITICAL NOTICE**: When making changes to the project architecture, file structure, or adding new services, **YOU MUST UPDATE THIS DOCUMENTATION FILE** (`PROJECT_ARCHITECTURE.md`) to reflect the changes. This ensures that:
-> 
-> - Future developers understand the current state
-> - GitHub Copilot has accurate context for suggestions
-> - Project documentation stays synchronized with actual implementation
-> - Architecture decisions are properly documented
+> **⚠️ CRITICAL NOTICE**: When making changes to the project architecture, file structure, or adding new services, **YOU MUST UPDATE THIS DOCUMENTATION FILE** (`PROJECT_ARCHITECTURE.md`) to reflect the changes.
 
 ### **Code Organization**
 1. **Functions Structure**:
@@ -211,6 +195,9 @@ firebase deploy
 - `README.md` - Setup and usage instructions
 - `functions/package.json` - Dependencies and scripts
 - `firestore.rules` - Detailed security rules
+- `firestore.indexes.json` - Database query indexes
+- `functions/src/models/firestore-types.ts` - TypeScript interfaces
+- `functions/src/services/firestore.service.ts` - Database service layer
 
 ### **External Resources**
 - [Firebase Documentation](https://firebase.google.com/docs)
@@ -224,11 +211,15 @@ firebase deploy
 | Date | Change | Updated By |
 |------|--------|------------|
 | 2025-05-29 | Initial project setup with Firestore and Cloud Functions | System |
+| 2025-05-29 | Added comprehensive Firestore collections and document structures | System |
+| 2025-05-29 | Implemented TypeScript interfaces and service layer | System |
+| 2025-05-29 | Enhanced security rules with role-based access control | System |
+| 2025-05-29 | Added composite indexes for query optimization | System |
 
 ---
 
 **Last Updated**: May 29, 2025  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Maintainer**: Project Team
 
 > 📌 **Remember**: Keep this documentation updated when making architectural changes!
