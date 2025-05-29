@@ -1,0 +1,234 @@
+# Multi-Tenant Reservation System - Project Architecture
+
+## 🏗️ Project Overview
+
+This is a **multi-tenant reservation system** built with Firebase services, designed to allow multiple organizations (tenants) to manage their own reservations independently while sharing the same infrastructure.
+
+## 📋 Table of Contents
+
+- [Project Structure](#project-structure)
+- [Technology Stack](#technology-stack)
+- [Architecture Patterns](#architecture-patterns)
+- [Firebase Configuration](#firebase-configuration)
+- [Security Model](#security-model)
+- [Development Guidelines](#development-guidelines)
+- [Deployment Instructions](#deployment-instructions)
+
+---
+
+## 📁 Project Structure
+
+```
+multitennantReservationSystem/
+├── .firebaserc                    # Firebase project configuration
+├── .gitignore                     # Git ignore patterns
+├── firebase.json                  # Firebase services configuration
+├── firestore.indexes.json         # Firestore database indexes
+├── firestore.rules               # Multi-tenant security rules
+├── PROJECT_ARCHITECTURE.md       # 📖 This documentation file
+├── README.md                      # Project setup and usage guide
+└── functions/                     # ☁️ Cloud Functions (TypeScript)
+    ├── .eslintrc.js              # ESLint configuration
+    ├── .gitignore                # Functions-specific git ignore
+    ├── package.json              # Node.js dependencies
+    ├── package-lock.json         # Dependency lock file
+    ├── tsconfig.json             # TypeScript configuration
+    ├── tsconfig.dev.json         # Development TypeScript config
+    ├── node_modules/             # Installed dependencies
+    └── src/                      # 📝 Source code
+        ├── index.ts              # Main functions entry point
+        ├── models/               # 📊 Data models and interfaces
+        ├── services/             # 🔧 Business logic services
+        ├── utils/                # 🛠️ Utility functions
+        ├── middleware/           # 🔒 Authentication & validation
+        └── handlers/             # 📡 HTTP request handlers
+```
+
+---
+
+## 🛠️ Technology Stack
+
+### **Backend Services**
+- **Firebase Cloud Functions** - Serverless backend API
+- **Cloud Firestore** - NoSQL document database
+- **Firebase Authentication** - User authentication & authorization
+- **Firebase Hosting** - Static website hosting (future)
+
+### **Languages & Frameworks**
+- **TypeScript** - Primary development language
+- **Node.js** - Runtime environment
+- **ESLint** - Code linting and formatting
+
+### **Development Tools**
+- **Firebase CLI** - Project management and deployment
+- **npm** - Package management
+
+---
+
+## 🏛️ Architecture Patterns
+
+### **Multi-Tenancy Model**
+- **Tenant Isolation**: Each tenant's data is logically separated
+- **Shared Infrastructure**: All tenants use the same Firebase project
+- **Row-Level Security**: Firestore rules enforce tenant boundaries
+
+### **Data Architecture**
+```
+Firestore Database Structure:
+├── users/{userId}                 # User profiles
+├── tenants/{tenantId}/            # Tenant-specific collections
+│   ├── reservations/{reservationId}
+│   ├── resources/{resourceId}
+│   ├── settings/{settingId}
+│   └── analytics/{analyticsId}
+```
+
+### **Security Architecture**
+- **Authentication-First**: All operations require valid Firebase Auth
+- **Tenant-Scoped Access**: Users can only access their tenant's data
+- **Role-Based Permissions**: Different access levels within tenants
+
+---
+
+## 🔧 Firebase Configuration
+
+### **Project Details**
+- **Project ID**: `multitenantreservationsystem`
+- **Project Number**: `765272618513`
+- **Display Name**: "Reservation System"
+
+### **Enabled Services**
+- ✅ Cloud Firestore
+- ✅ Cloud Functions
+- ✅ Firebase Authentication (to be configured)
+- 🔲 Firebase Hosting (future)
+- 🔲 Firebase Storage (future)
+
+### **Configuration Files**
+- `firebase.json` - Service configurations
+- `.firebaserc` - Project aliases
+- `firestore.rules` - Database security rules
+- `firestore.indexes.json` - Query optimization indexes
+
+---
+
+## 🔒 Security Model
+
+### **Firestore Security Rules**
+```javascript
+// Multi-tenant access control
+match /tenants/{tenantId} {
+  allow read, write: if request.auth != null && 
+                        request.auth.token.tenantId == tenantId;
+  
+  match /{document=**} {
+    allow read, write: if request.auth != null && 
+                          request.auth.token.tenantId == tenantId;
+  }
+}
+
+// User profile access
+match /users/{userId} {
+  allow read, write: if request.auth != null && 
+                        request.auth.uid == userId;
+}
+```
+
+### **Authentication Strategy**
+- **Custom Claims**: Users have `tenantId` in their JWT token
+- **Tenant Assignment**: Users are assigned to tenants during registration
+- **Role Management**: Additional roles (admin, user, viewer) stored in custom claims
+
+---
+
+## 📋 Development Guidelines
+
+### **🚨 IMPORTANT: Architecture Update Policy**
+
+> **⚠️ CRITICAL NOTICE**: When making changes to the project architecture, file structure, or adding new services, **YOU MUST UPDATE THIS DOCUMENTATION FILE** (`PROJECT_ARCHITECTURE.md`) to reflect the changes. This ensures that:
+> 
+> - Future developers understand the current state
+> - GitHub Copilot has accurate context for suggestions
+> - Project documentation stays synchronized with actual implementation
+> - Architecture decisions are properly documented
+
+### **Code Organization**
+1. **Functions Structure**:
+   - `models/` - TypeScript interfaces and data models
+   - `services/` - Business logic and data operations
+   - `handlers/` - HTTP request/response handling
+   - `middleware/` - Authentication, validation, error handling
+   - `utils/` - Shared utility functions
+
+2. **Naming Conventions**:
+   - Files: `kebab-case.ts`
+   - Functions: `camelCase`
+   - Constants: `UPPER_SNAKE_CASE`
+   - Interfaces: `PascalCase` with `I` prefix
+
+3. **TypeScript Standards**:
+   - Strict type checking enabled
+   - Explicit return types for functions
+   - Interface-first development
+
+### **Development Workflow**
+1. Make code changes
+2. Update this architecture file if structure changes
+3. Test locally with Firebase emulators
+4. Deploy to staging environment
+5. Test integration
+6. Deploy to production
+
+---
+
+## 🚀 Deployment Instructions
+
+### **Local Development**
+```bash
+# Install dependencies
+cd functions && npm install
+
+# Start Firebase emulators
+firebase emulators:start
+
+# Deploy functions only
+firebase deploy --only functions
+
+# Deploy all services
+firebase deploy
+```
+
+### **Environment Management**
+- **Development**: Use Firebase emulators
+- **Staging**: Deploy to staging project (to be created)
+- **Production**: Deploy to `multitenantreservationsystem`
+
+---
+
+## 📚 Additional Documentation
+
+### **Related Files**
+- `README.md` - Setup and usage instructions
+- `functions/package.json` - Dependencies and scripts
+- `firestore.rules` - Detailed security rules
+
+### **External Resources**
+- [Firebase Documentation](https://firebase.google.com/docs)
+- [Cloud Functions Guide](https://firebase.google.com/docs/functions)
+- [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
+
+---
+
+## 📝 Change Log
+
+| Date | Change | Updated By |
+|------|--------|------------|
+| 2025-05-29 | Initial project setup with Firestore and Cloud Functions | System |
+
+---
+
+**Last Updated**: May 29, 2025  
+**Version**: 1.0.0  
+**Maintainer**: Project Team
+
+> 📌 **Remember**: Keep this documentation updated when making architectural changes!
