@@ -39,10 +39,9 @@ multitennantReservationSystem/
     └── src/                      # 📝 Source code
         ├── index.ts              # Main functions entry point
         ├── models/               # 📊 Data models and interfaces
-        ├── services/             # 🔧 Business logic services
-        ├── utils/                # 🛠️ Utility functions
-        ├── middleware/           # 🔒 Authentication & validation
-        └── handlers/             # 📡 HTTP request handlers
+        │   └── firestore-types.ts
+        └── services/             # 🔧 Business logic services
+            └── firestore.service.ts
 ```
 
 ---
@@ -76,12 +75,10 @@ multitennantReservationSystem/
 ### **Data Architecture**
 ```
 Firestore Database Structure:
-├── users/{userId}                 # User profiles
-├── tenants/{tenantId}/            # Tenant-specific collections
-│   ├── reservations/{reservationId}
-│   ├── resources/{resourceId}
-│   ├── settings/{settingId}
-│   └── analytics/{analyticsId}
+├── tenants/{tenantId}             # Tenant organizations
+├── calendars/{calendarId}         # Bookable resources/calendars
+├── reservations/{reservationId}   # Reservation records
+└── users/{userId}                 # User profiles
 ```
 
 ### **Security Architecture**
@@ -94,9 +91,8 @@ Firestore Database Structure:
 ## 🔧 Firebase Configuration
 
 ### **Project Details**
-- **Project ID**: `multitenantreservationsystem`
-- **Project Number**: `765272618513`
-- **Display Name**: "Reservation System"
+- **Project ID**: `gastby-navarenas`
+- **Display Name**: "Multi-Tenant Reservation System"
 
 ### **Enabled Services**
 - ✅ Cloud Firestore
@@ -140,11 +136,14 @@ The security rules enforce strict tenant isolation and role-based access control
 1. **Functions Structure**:
    - `models/` - TypeScript interfaces and data models
    - `services/` - Business logic and data operations
-   - `handlers/` - HTTP request/response handling
-   - `middleware/` - Authentication, validation, error handling
-   - `utils/` - Shared utility functions
 
-2. **Naming Conventions**:
+2. **Available Functions**:
+   - `helloWorld` - Health check endpoint
+   - `createTenant` - Create new tenant organization
+   - `getTenant` - Retrieve tenant information
+   - `createCalendar` - Create bookable calendar/resource
+
+3. **Naming Conventions**:
    - Files: `kebab-case.ts`
    - Functions: `camelCase`
    - Constants: `UPPER_SNAKE_CASE`
@@ -185,7 +184,7 @@ firebase deploy
 ### **Environment Management**
 - **Development**: Use Firebase emulators
 - **Staging**: Deploy to staging project (to be created)
-- **Production**: Deploy to `multitenantreservationsystem`
+- **Production**: Deploy to `gastby-navarenas`
 
 ---
 
@@ -193,6 +192,7 @@ firebase deploy
 
 ### **Related Files**
 - `README.md` - Setup and usage instructions
+- `DEVELOPMENT_GUIDE.md` - Code style standards and development patterns
 - `functions/package.json` - Dependencies and scripts
 - `firestore.rules` - Detailed security rules
 - `firestore.indexes.json` - Database query indexes
@@ -215,11 +215,12 @@ firebase deploy
 | 2025-05-29 | Implemented TypeScript interfaces and service layer | System |
 | 2025-05-29 | Enhanced security rules with role-based access control | System |
 | 2025-05-29 | Added composite indexes for query optimization | System |
+| 2025-05-29 | Updated documentation to match actual codebase and project ID | GitHub Copilot |
 
 ---
 
-**Last Updated**: May 29, 2025  
-**Version**: 1.1.0  
+**Last Updated**: May 29, 2025
+**Version**: 1.2.0
 **Maintainer**: Project Team
 
 > 📌 **Remember**: Keep this documentation updated when making architectural changes!

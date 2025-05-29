@@ -16,7 +16,7 @@ A Firebase-powered reservation management system designed for multiple tenants (
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v20 or higher)
+- Node.js (v22 or higher)
 - Firebase CLI installed globally
 - Firebase account with billing enabled
 
@@ -39,6 +39,9 @@ firebase emulators:start
 
 For detailed project architecture, security model, and development guidelines, see:
 **[PROJECT_ARCHITECTURE.md](./PROJECT_ARCHITECTURE.md)**
+
+For code style standards, TypeScript patterns, and development best practices, see:
+**[DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)**
 
 ## 🛠️ Development Commands
 
@@ -71,15 +74,30 @@ firebase functions:log
 
 ## 🔧 Firebase Project
 
-- **Project ID**: `multitenantreservationsystem`
-- **Console**: [Firebase Console](https://console.firebase.google.com/project/multitenantreservationsystem)
+- **Project ID**: `gastby-navarenas`
+- **Console**: [Firebase Console](https://console.firebase.google.com/project/gastby-navarenas)
+
+## 🔗 Available API Endpoints
+
+When running locally with Firebase emulators:
+
+- `GET /helloWorld` - Health check endpoint
+- `POST /createTenant` - Create new tenant organization
+- `GET /getTenant?tenantId=ID` - Get tenant information
+- `POST /createCalendar` - Create bookable calendar/resource
+
+## 📋 Key Features (Current Implementation)
+
+- 🏢 Multi-tenant architecture with data isolation
+- 📅 Calendar/resource management
+- 🗃️ Firestore database with security rules
+- 🔒 Tenant-scoped data access
+- 📊 TypeScript interfaces and service layer
 
 ## 📋 Key Features (Planned)
 
-- 🏢 Multi-tenant architecture
-- 📅 Reservation management
-- 👤 User authentication
-- 🔒 Tenant-isolated data
+- 👤 User authentication with Google Sign-In
+- 📅 Full reservation management system
 - 📊 Analytics dashboard
 - 🔔 Notifications
 
