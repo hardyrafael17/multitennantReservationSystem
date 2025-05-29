@@ -1,6 +1,30 @@
 import {Timestamp} from "firebase-admin/firestore";
 
 /**
+ * Schema Field Definition for dynamic validation
+ */
+export interface SchemaFieldDefinition {
+  name: string; // Field name
+  type: "string" | "number" | "boolean" | "array" | "object"; // Field data type
+  required: boolean; // Whether field is required
+  options?: string[]; // Allowed values for the field
+  min?: number; // Minimum value (for numbers)
+  max?: number; // Maximum value (for numbers)
+  label?: string; // Display label for the field
+  placeholder?: string; // Placeholder text for UI
+}
+
+/**
+ * Reservation Type Schema Definition
+ */
+export interface ReservationTypeSchema {
+  fields: SchemaFieldDefinition[]; // Dynamic field definitions
+  requiresApproval: boolean; // Whether this reservation type needs approval
+  name?: string; // Display name for this reservation type
+  description?: string; // Description of this reservation type
+}
+
+/**
  * Tenant Document Interface
  * Represents a tenant organization in the multi-tenant system
  */
@@ -8,9 +32,11 @@ export interface TenantDocument {
   name: string; // Display name of the tenant organization
   domain: string; // Domain for tenant identification (e.g., "company.com")
   schemaConfig: {
-    // Custom fields for reservations ["name", "email", "serviceType"]
-    reservationFields: string[];
-    requiresApproval: boolean; // Whether reservations need manual approval
+    // Dynamic reservation type definitions
+    reservationTypes: Record<string, ReservationTypeSchema>;
+    // Legacy fields for backward compatibility
+    reservationFields?: string[];
+    requiresApproval?: boolean;
   };
   createdAt: Timestamp; // When tenant was created
   updatedAt: Timestamp; // Last modification time
@@ -33,6 +59,7 @@ export interface CalendarDocument {
   tenantId: string; // Foreign key to tenants collection
   name: string; // Calendar display name
   description?: string; // Optional calendar description
+  reservationTypeKey?: string; // Default reservation type for this calendar
   availability: {
     [weekday: string]: { // "monday", "tuesday", etc.
       start: string; // Start time "09:00"
@@ -64,10 +91,11 @@ export interface CalendarDocument {
 export interface ReservationDocument {
   tenantId: string; // Foreign key to tenants collection
   calendarId: string; // Foreign key to calendars collection
+  reservationTypeKey: string; // Key identifying the reservation type schema
   start: Timestamp; // Reservation start time
   end: Timestamp; // Reservation end time
   userId: string; // ID of user who made the reservation
-  // Flexible object based on tenant's schemaConfig.reservationFields
+  // Flexible object based on tenant's schemaConfig.reservationTypes[reservationTypeKey].fields
   details: Record<string, string | number | boolean>;
   status: "pending" | "confirmed" | "cancelled" | "completed" | "no-show";
   createdAt: Timestamp;
@@ -126,8 +154,10 @@ export interface CreateTenantRequest {
   name: string;
   domain: string;
   schemaConfig: {
-    reservationFields: string[];
-    requiresApproval: boolean;
+    reservationTypes: Record<string, ReservationTypeSchema>;
+    // Legacy fields for backward compatibility
+    reservationFields?: string[];
+    requiresApproval?: boolean;
   };
   settings?: TenantDocument["settings"];
 }
@@ -136,6 +166,7 @@ export interface CreateCalendarRequest {
   tenantId: string;
   name: string;
   description?: string;
+  reservationTypeKey?: string; // Default reservation type for this calendar
   availability: CalendarDocument["availability"];
   slotDuration: number;
   bufferTime?: number;
@@ -150,6 +181,15 @@ export interface CreateReservationRequest {
   end: string | Timestamp; // ISO string or Timestamp
   details: Record<string, string | number | boolean>;
   metadata?: ReservationDocument["metadata"];
+}
+
+export interface CreateReservationCallableRequest {
+  tenantId: string;
+  calendarId: string;
+  start: string; // ISO 8601 string
+  end: string; // ISO 8601 string
+  details: Record<string, string | number | boolean>;
+  reservationTypeKey?: string; // Optional - will use calendar default if not provided
 }
 
 export interface UpdateReservationRequest {

@@ -8,6 +8,7 @@ import {
   CreateTenantRequest,
   CreateCalendarRequest,
   CreateReservationRequest,
+  ReservationTypeSchema,
 } from "../models/firestore-types";
 
 /**
@@ -93,6 +94,7 @@ export class FirestoreService {
     const reservationDoc: ReservationDocument = {
       tenantId: data.tenantId,
       calendarId: data.calendarId,
+      reservationTypeKey: "", // Will be set by the calling function
       start: typeof data.start === "string" ? Timestamp.fromDate(new Date(data.start)) : data.start,
       end: typeof data.end === "string" ? Timestamp.fromDate(new Date(data.end)) : data.end,
       userId: "", // Will be set by the calling function with authenticated user ID
@@ -244,23 +246,158 @@ export class FirestoreService {
   }
 
   /**
-   * Validate reservation details against tenant schema
+   * Validate reservation details against tenant schema (legacy method for backward compatibility)
    */
   validateReservationDetails(
     details: Record<string, string | number | boolean>,
     schemaConfig: TenantDocument["schemaConfig"]
   ): { isValid: boolean; missingFields: string[] } {
-    const missingFields = schemaConfig.reservationFields.filter((field) =>
-      !Object.prototype.hasOwnProperty.call(details, field) ||
-      details[field] === null ||
-      details[field] === undefined ||
-      details[field] === ""
-    );
+    // Support legacy schema format
+    if (schemaConfig.reservationFields) {
+      const missingFields = schemaConfig.reservationFields.filter((field) =>
+        !Object.prototype.hasOwnProperty.call(details, field) ||
+        details[field] === null ||
+        details[field] === undefined ||
+        details[field] === ""
+      );
+
+      return {
+        isValid: missingFields.length === 0,
+        missingFields,
+      };
+    }
+
+    // If no legacy fields, assume validation is handled elsewhere
+    return {
+      isValid: true,
+      missingFields: [],
+    };
+  }
+
+  /**
+   * Advanced schema validation for new reservation type schema
+   */
+  validateReservationDetailsAdvanced(
+    details: Record<string, string | number | boolean>,
+    schemaDefinition: ReservationTypeSchema
+  ): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    for (const field of schemaDefinition.fields) {
+      const value = details[field.name];
+      const hasValue = value !== null && value !== undefined && value !== "";
+
+      // Check required fields
+      if (field.required && !hasValue) {
+        errors.push(`Field '${field.name}' is required`);
+        continue;
+      }
+
+      // Skip type checking if field is not provided and not required
+      if (!hasValue) {
+        continue;
+      }
+
+      // Type validation
+      switch (field.type) {
+      case "string":
+        if (typeof value !== "string") {
+          errors.push(`Field '${field.name}' must be a string`);
+        }
+        break;
+      case "number":
+        if (typeof value !== "number") {
+          errors.push(`Field '${field.name}' must be a number`);
+        } else {
+          // Min/Max validation for numbers
+          if (field.min !== undefined && value < field.min) {
+            errors.push(`Field '${field.name}' must be at least ${field.min}`);
+          }
+          if (field.max !== undefined && value > field.max) {
+            errors.push(`Field '${field.name}' must be at most ${field.max}`);
+          }
+        }
+        break;
+      case "boolean":
+        if (typeof value !== "boolean") {
+          errors.push(`Field '${field.name}' must be a boolean`);
+        }
+        break;
+      case "array":
+        if (!Array.isArray(value)) {
+          errors.push(`Field '${field.name}' must be an array`);
+        }
+        break;
+      }
+
+      // Options validation
+      if (field.options && field.options.length > 0) {
+        if (field.type === "array" && Array.isArray(value)) {
+          // For array types, check if all items are in options
+          for (const item of value) {
+            if (!field.options.includes(String(item))) {
+              const allowedOptions = field.options.join(", ");
+              errors.push(`Field '${field.name}' contains invalid option '${item}'. Allowed: ${allowedOptions}`);
+            }
+          }
+        } else {
+          // For single values, check if value is in options
+          if (!field.options.includes(String(value))) {
+            errors.push(`Field '${field.name}' must be one of: ${field.options.join(", ")}`);
+          }
+        }
+      }
+    }
 
     return {
-      isValid: missingFields.length === 0,
-      missingFields,
+      isValid: errors.length === 0,
+      errors,
     };
+  }
+
+  /**
+   * Check for conflicting reservations within a time range
+   */
+  async checkReservationConflicts(
+    tenantId: string,
+    calendarId: string,
+    startTime: Date,
+    endTime: Date,
+    excludeReservationId?: string
+  ): Promise<Array<ReservationDocument & { id: string }>> {
+    const query = this.db.collection(COLLECTIONS.RESERVATIONS)
+      .where("tenantId", "==", tenantId)
+      .where("calendarId", "==", calendarId)
+      .where("status", "!=", "cancelled");
+
+    // Check for overlapping reservations
+    // A reservation overlaps if: (start < endTime) AND (end > startTime)
+    const snapshot = await query
+      .where("start", "<", Timestamp.fromDate(endTime))
+      .where("end", ">", Timestamp.fromDate(startTime))
+      .get();
+
+    const conflictingReservations = snapshot.docs
+      .filter((doc) => excludeReservationId ? doc.id !== excludeReservationId : true)
+      .map((doc) => ({id: doc.id, ...doc.data() as ReservationDocument}));
+
+    return conflictingReservations;
+  }
+
+  /**
+   * Create reservation with full reservation data (used by createReservation callable)
+   */
+  async createReservationFull(
+    reservationData: Omit<ReservationDocument, "createdAt" | "updatedAt">
+  ): Promise<string> {
+    const reservationDoc: ReservationDocument = {
+      ...reservationData,
+      createdAt: FieldValue.serverTimestamp() as Timestamp,
+      updatedAt: FieldValue.serverTimestamp() as Timestamp,
+    };
+
+    const docRef = await this.db.collection(COLLECTIONS.RESERVATIONS).add(reservationDoc);
+    return docRef.id;
   }
 }
 
