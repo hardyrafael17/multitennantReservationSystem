@@ -138,10 +138,11 @@ The security rules enforce strict tenant isolation and role-based access control
    - `services/` - Business logic and data operations
 
 2. **Available Functions**:
-   - `helloWorld` - Health check endpoint
-   - `createTenant` - Create new tenant organization
-   - `getTenant` - Retrieve tenant information
-   - `createCalendar` - Create bookable calendar/resource
+   - `helloWorld` - Health check endpoint (HTTP Request)
+   - `createTenant` - Create new tenant organization (HTTP Request)
+   - `getTenant` - Retrieve tenant information (HTTP Request)
+   - `createCalendar` - Create bookable calendar/resource (HTTP Request)
+   - `createReservation` - Create new reservation with dynamic validation (HTTPS Callable)
 
 3. **Naming Conventions**:
    - Files: `kebab-case.ts`
@@ -216,11 +217,15 @@ firebase deploy
 | 2025-05-29 | Enhanced security rules with role-based access control | System |
 | 2025-05-29 | Added composite indexes for query optimization | System |
 | 2025-05-29 | Updated documentation to match actual codebase and project ID | GitHub Copilot |
+| 2025-05-29 | Implemented createReservation HTTPS Callable function with advanced schema validation | GitHub Copilot |
+| 2025-05-29 | Enhanced type definitions to support dynamic reservation type schemas | GitHub Copilot |
+| 2025-06-01 | Added advanced schema configuration documentation | System |
+| 2025-06-01 | Updated createReservation function features | System |
 
 ---
 
-**Last Updated**: May 29, 2025
-**Version**: 1.2.0
+**Last Updated**: June 1, 2025
+**Version**: 1.3.0
 **Maintainer**: Project Team
 
 > 📌 **Remember**: Keep this documentation updated when making architectural changes!
