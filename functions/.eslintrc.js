@@ -9,13 +9,13 @@ module.exports = {
     "plugin:import/errors",
     "plugin:import/warnings",
     "plugin:import/typescript",
-    "google",
     "plugin:@typescript-eslint/recommended",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
-    project: ["tsconfig.json", "tsconfig.dev.json"],
+    project: ["./tsconfig.json", "./tsconfig.dev.json"],
     sourceType: "module",
+    tsconfigRootDir: __dirname,
   },
   ignorePatterns: [
     "/lib/**/*", // Ignore built files.
@@ -29,5 +29,9 @@ module.exports = {
     "quotes": ["error", "double"],
     "import/no-unresolved": 0,
     "indent": ["error", 2],
+    "max-len": ["error", {"code": 120}], // Increased line length
+    "require-jsdoc": "off", // Disable JSDoc requirement
+    "valid-jsdoc": "off", // Disable JSDoc validation
+    "@typescript-eslint/no-explicit-any": "warn", // Warning instead of error
   },
 };

@@ -2,6 +2,17 @@
 
 A Firebase-powered reservation management system designed for multiple tenants (organizations) to manage their bookings independently.
 
+## 📋 Development Guidelines
+
+**For developers and AI assistants**: Please review the [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) for:
+- Code style standards (ESLint/TypeScript rules)
+- Import/export patterns
+- Firebase Functions best practices
+- Type safety guidelines
+- Error handling patterns
+
+**Key Rules**: Use double quotes, no spaces in braces for simple objects, max 120 chars per line, avoid `any` type, use proper TypeScript patterns.
+
 ## 🚀 Quick Start
 
 ### Prerequisites
