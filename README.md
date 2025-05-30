@@ -35,6 +35,9 @@ firebase login
 firebase emulators:start
 ```
 
+### Running the Frontend
+The frontend can be tested locally with Firebase emulators. After running `firebase emulators:start`, the application is typically available at `http://127.0.0.1:5000` (check emulator logs for the exact port).
+
 ## 📖 Documentation
 
 For detailed project architecture, security model, and development guidelines, see:
@@ -68,6 +71,10 @@ firebase functions:log
 multitennantReservationSystem/
 ├── PROJECT_ARCHITECTURE.md    # 📖 Detailed architecture documentation
 ├── DEVELOPMENT_GUIDE.md       # 🛠️ Code style and development standards
+├── public/                    # 🌐 Static frontend (HTML, CSS, JS)
+│   ├── index.html            # Main HTML page
+│   ├── app.js                # Frontend JavaScript logic
+│   └── style.css             # Basic styling
 ├── functions/                 # ☁️ Cloud Functions (TypeScript)
 │   ├── src/
 │   │   ├── index.ts          # Main functions entry point
@@ -129,10 +136,10 @@ When running locally with Firebase emulators:
 ## 📋 Key Features (Planned)
 
 - 👤 **User authentication** with Google Sign-In and custom claims
-- 🌐 **Frontend application** with modern UI framework
+- 🌐 **Basic static frontend application** (in `public/`) with Google Sign-In
 - 📊 **Analytics dashboard** for tenant insights
 - 🔔 **Notification system** for reservation updates
-- 🏪 **Firebase Hosting** for web application
+- 🏪 **Firebase Hosting** for web application (setup for `public/` directory)
 - 📱 **Mobile-responsive design**
 - 🔄 **Real-time updates** using Firestore listeners
 - 📈 **Advanced reporting** and usage metrics

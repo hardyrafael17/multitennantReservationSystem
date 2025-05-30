@@ -28,6 +28,10 @@ multitennantReservationSystem/
 ├── firestore.rules               # Multi-tenant security rules
 ├── PROJECT_ARCHITECTURE.md       # 📖 This documentation file
 ├── README.md                      # Project setup and usage guide
+├── public/                        # 🌐 Static frontend (HTML, CSS, JS)
+│   ├── index.html                # Main HTML page
+│   ├── app.js                    # Frontend JavaScript logic
+│   └── style.css                 # Basic styling
 └── functions/                     # ☁️ Cloud Functions (TypeScript)
     ├── .eslintrc.js              # ESLint configuration
     ├── .gitignore                # Functions-specific git ignore
@@ -38,10 +42,14 @@ multitennantReservationSystem/
     ├── node_modules/             # Installed dependencies
     └── src/                      # 📝 Source code
         ├── index.ts              # Main functions entry point
-        ├── models/               # 📊 Data models and interfaces
-        │   └── firestore-types.ts
-        └── services/             # 🔧 Business logic services
-            └── firestore.service.ts
+│       ├── models/               # 📊 Data models and interfaces
+│       │   └── firestore-types.ts
+│       └── services/             # 🔧 Business logic services
+│           └── firestore.service.ts
+└── public/                       # 🌐 Frontend application (static website)
+    ├── index.html                # Main entry point and structure
+    ├── app.js                    # Firebase initialization and auth logic
+    └── style.css                 # Basic styling
 ```
 
 ---
@@ -338,6 +346,32 @@ These collections maintain backward compatibility during migration:
 - `/reservations/{reservationId}` - Legacy reservation documents
 
 **Migration Note**: New implementations should use the tenant-based subcollection structure for better isolation and scalability.
+
+---
+
+## 🌐 Frontend Application (Static Website)
+
+The project includes a basic static frontend application located in the `public/` directory at the root of the project.
+
+### Purpose
+- Provides a user interface for user authentication (Google Sign-In).
+- Acts as a starting point for users to interact with the multi-tenant reservation system's backend services.
+- Demonstrates how to obtain and use Firebase ID tokens (including custom claims like `tenantId` and `roles`) for making authenticated API calls to Cloud Functions.
+
+### Technology Stack
+- HTML5
+- CSS3
+- JavaScript (ES6+)
+- Firebase SDK (for Authentication and potentially Firestore client-side access in the future)
+
+### Hosting
+- Served by **Firebase Hosting**, configured to use the `public/` directory.
+- Can be tested locally using the Firebase emulators (`firebase emulators:start`).
+
+### Key Files
+- `public/index.html`: The main entry point and structure of the application.
+- `public/app.js`: Handles Firebase initialization, authentication logic (Google Sign-In), UI updates based on auth state, and example API calls to backend functions.
+- `public/style.css`: Provides basic styling for the application.
 
 ---
 

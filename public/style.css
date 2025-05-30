@@ -1,0 +1,65 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f7f6;
+    color: #333;
+    line-height: 1.6;
+}
+
+h1 {
+    color: #2c3e50;
+}
+
+#auth-container, #user-info {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Hide elements by default when appropriate */
+#signOutBtn {
+    display: none;
+}
+
+#user-info {
+    display: none;
+}
+
+button {
+    padding: 10px 18px;
+    margin-right: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #3498db;
+    color: white;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#signOutBtn {
+    background-color: #e74c3c;
+}
+
+#signOutBtn:hover {
+    background-color: #c0392b;
+}
+
+pre {
+    background-color: #ecf0f1;
+    padding: 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    overflow-x: auto;
+    white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+    white-space: -pre-wrap; /* Opera 4-6 */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    white-space: pre-wrap; /* CSS3 */
+    word-wrap: break-word; /* Internet Explorer 5.5+ */
+}
