@@ -1,6 +1,6 @@
 # Multi-Tenant Reservation System
 
-A Firebase-powered reservation management system designed for multiple tenants (organizations) to manage their bookings independently.
+A Firebase-powered reservation management system designed for multiple tenants (organizations) to manage their bookings independently with strict data isolation and role-based access control.
 
 ## 📋 Development Guidelines
 
@@ -65,11 +65,21 @@ firebase functions:log
 ## 🏗️ Project Structure
 
 ```
+multitennantReservationSystem/
 ├── PROJECT_ARCHITECTURE.md    # 📖 Detailed architecture documentation
+├── DEVELOPMENT_GUIDE.md       # 🛠️ Code style and development standards
 ├── functions/                 # ☁️ Cloud Functions (TypeScript)
-├── firestore.rules           # 🔒 Database security rules
+│   ├── src/
+│   │   ├── index.ts          # Main functions entry point
+│   │   ├── models/           # 📊 Data models and interfaces
+│   │   └── services/         # 🔧 Business logic services
+│   ├── package.json          # Node.js dependencies
+│   └── tsconfig.json         # TypeScript configuration
+├── firestore.rules           # 🔒 Multi-tenant security rules
+├── firestore.indexes.json    # 📊 Database indexes
 ├── firebase.json             # ⚙️ Firebase configuration
-└── README.md                 # 📄 This file
+├── .firebaserc              # 🎯 Firebase project aliases
+└── README.md                # 📄 This file
 ```
 
 ## 🔧 Firebase Project
@@ -81,38 +91,107 @@ firebase functions:log
 
 When running locally with Firebase emulators:
 
+### HTTP Endpoints
 - `GET /helloWorld` - Health check endpoint
 - `POST /createTenant` - Create new tenant organization
 - `GET /getTenant?tenantId=ID` - Get tenant information
 - `POST /createCalendar` - Create bookable calendar/resource
 
+### HTTPS Callable Functions
+- `createReservation` - Create new reservation with dynamic validation and schema support
+
+**Access Pattern**: All endpoints enforce tenant isolation through custom JWT claims (`tenantId` and `roles`).
+
 ## 📋 Key Features (Current Implementation)
 
-- 🏢 Multi-tenant architecture with data isolation
-- 📅 Calendar/resource management
-- 🗃️ Firestore database with security rules
-- 🔒 Tenant-scoped data access
-- 📊 TypeScript interfaces and service layer
+- 🏢 **Multi-tenant architecture** with strict data isolation
+- � **Enhanced security model** with array-based roles (`admin`, `staff`, `user`)
+- 📊 **Hierarchical data structure** using tenant-based subcollections
+- �📅 **Calendar/resource management** with tenant-specific access
+- 🗃️ **Firestore database** with comprehensive security rules
+- 🎯 **Tenant-scoped data access** through custom JWT claims
+- � **TypeScript interfaces** and service layer
+- 🔄 **Backward compatibility** with legacy flat structure
+- ⚡ **Dynamic reservation validation** with schema support
+
+### Current Data Structure
+```
+├── /users/{userId}                               # User profiles
+├── /tenants/{tenantId}                          # Tenant organizations
+│   ├── /calendars/{calendarId}                  # Tenant calendars
+│   ├── /reservations/{reservationId}            # Tenant reservations
+│   ├── /resources/{resourceId}                  # Tenant resources
+│   ├── /settings/{settingId}                    # Tenant settings
+│   └── /analytics/{analyticsId}                 # Tenant analytics
+└── Legacy collections (deprecated)              # Backward compatibility
+```
 
 ## 📋 Key Features (Planned)
 
-- 👤 User authentication with Google Sign-In
-- 📅 Full reservation management system
-- 📊 Analytics dashboard
-- 🔔 Notifications
+- 👤 **User authentication** with Google Sign-In and custom claims
+- 🌐 **Frontend application** with modern UI framework
+- 📊 **Analytics dashboard** for tenant insights
+- 🔔 **Notification system** for reservation updates
+- 🏪 **Firebase Hosting** for web application
+- 📱 **Mobile-responsive design**
+- 🔄 **Real-time updates** using Firestore listeners
+- 📈 **Advanced reporting** and usage metrics
+
+## 🔒 Security Model
+
+### **Authentication & Authorization**
+- **Custom JWT Claims**: Users have `tenantId` and `roles` array in their tokens
+- **Tenant Isolation**: Strict data separation between organizations
+- **Role-Based Access**: Granular permissions within tenant scope
+- **Array-Based Roles**: Supports multiple roles per user (`admin`, `staff`, `user`)
+
+### **Firestore Security Rules**
+- ✅ **Tenant membership validation** for all data access
+- ✅ **Resource ownership checks** for user-created content
+- ✅ **Admin-only operations** for sensitive tenant management
+- ✅ **Self-service capabilities** for user profiles and reservations
+- ✅ **Backward compatibility** during migration period
+
+**Example Custom Claims Structure:**
+```json
+{
+  "tenantId": "acme-corp",
+  "roles": ["admin", "staff"]
+}
+```
 
 ## 🤝 Contributing
 
-1. Read the [PROJECT_ARCHITECTURE.md](./PROJECT_ARCHITECTURE.md) file
-2. Make your changes
-3. **Update PROJECT_ARCHITECTURE.md if you modify the project structure**
-4. Test with Firebase emulators
-5. Submit a pull request
+1. **Read the documentation**: Review [PROJECT_ARCHITECTURE.md](./PROJECT_ARCHITECTURE.md) and [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
+2. **Follow code standards**: Use TypeScript best practices and ESLint rules
+3. **Respect security model**: Ensure all changes maintain tenant isolation
+4. **Update documentation**: **Always update PROJECT_ARCHITECTURE.md** if you modify project structure
+5. **Test thoroughly**: Use Firebase emulators for local testing
+6. **Validate security rules**: Run `firebase emulators:start` to test rule changes
+7. **Submit pull request**: Include detailed description of changes
+
+### **Development Checklist**
+- [ ] Code follows TypeScript/ESLint standards
+- [ ] Security rules updated if data structure changes
+- [ ] Documentation updated for architectural changes
+- [ ] Tests pass with Firebase emulators
+- [ ] Custom claims and tenant isolation maintained
 
 ## 📞 Support
 
-For questions about the project architecture or development guidelines, refer to the comprehensive documentation in `PROJECT_ARCHITECTURE.md`.
+For questions about the project:
+
+- **Architecture & Structure**: See [PROJECT_ARCHITECTURE.md](./PROJECT_ARCHITECTURE.md)
+- **Code Standards**: See [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
+- **Security Model**: Review the Security Model section above
+- **Firebase Console**: [gastby-navarenas project](https://console.firebase.google.com/project/gastby-navarenas)
+
+### **Quick Reference**
+- **Current Version**: 2.0.0 (Major restructuring with tenant-based subcollections)
+- **Last Updated**: May 30, 2025
+- **Node.js**: v22+ required
+- **Firebase CLI**: Latest version recommended
 
 ---
 
-**⚠️ Important**: Always update `PROJECT_ARCHITECTURE.md` when making structural changes to ensure documentation stays current!
+**⚠️ Important**: This project uses a hierarchical multi-tenant structure. Always update `PROJECT_ARCHITECTURE.md` AND `README.md` when making structural changes to ensure documentation stays current!

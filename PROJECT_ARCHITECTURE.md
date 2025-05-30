@@ -75,10 +75,15 @@ multitennantReservationSystem/
 ### **Data Architecture**
 ```
 Firestore Database Structure:
-├── tenants/{tenantId}             # Tenant organizations
-├── calendars/{calendarId}         # Bookable resources/calendars
-├── reservations/{reservationId}   # Reservation records
-└── users/{userId}                 # User profiles
+├── tenants/{tenantId}                           # Tenant organizations
+│   ├── calendars/{calendarId}                   # Tenant-specific calendars
+│   ├── reservations/{reservationId}             # Tenant-specific reservations
+│   ├── resources/{resourceId}                   # Tenant-specific resources
+│   ├── settings/{settingId}                     # Tenant-specific settings
+│   └── analytics/{analyticsId}                  # Tenant-specific analytics
+├── users/{userId}                               # User profiles
+├── calendars/{calendarId}                       # Legacy: Global calendars (deprecated)
+└── reservations/{reservationId}                 # Legacy: Global reservations (deprecated)
 ```
 
 ### **Security Architecture**
@@ -112,17 +117,38 @@ Firestore Database Structure:
 ## 🔒 Security Model
 
 ### **Multi-Tenant Authentication Strategy**
-- **Custom Claims**: Users have `tenantId` and `role` in their JWT token
+- **Custom Claims**: Users have `tenantId` and `roles` (array) in their JWT token
 - **Tenant Assignment**: Users are assigned to tenants during registration
-- **Role Management**: Three roles supported - `admin`, `staff`, `user`
+- **Role Management**: Array-based roles supported - `admin`, `staff`, `user` within tenant scope
 
 ### **Firestore Security Rules Implementation**
 The security rules enforce strict tenant isolation and role-based access control. Key features:
 
 - **Tenant Isolation**: Users can only access data for their assigned tenant
-- **Role-Based Access**: Different permissions for admin, staff, and regular users
-- **Resource Protection**: Calendars and reservations have appropriate read/write restrictions
+- **Array-Based Roles**: Updated from single role to array of roles for flexible permissions
+- **Hierarchical Data Structure**: New tenant-based subcollections for better data organization
+- **Resource Protection**: Calendars, reservations, and other resources have appropriate read/write restrictions
 - **Self-Service**: Users can manage their own profiles and reservations with limitations
+- **Backward Compatibility**: Legacy flat structure maintained during migration period
+
+### **Security Rule Structure**
+```
+Helper Functions:
+├── isAuthenticated()                    # Check user authentication
+├── isTenantMember(tenantId)            # Validate tenant membership
+├── isTenantAdmin(tenantId)             # Check admin role within tenant
+└── isResourceOwner(resource)           # Validate resource ownership
+
+Collection Rules:
+├── /users/{userId}                     # Self-access only
+├── /tenants/{tenantId}                 # Tenant member read, admin write
+├── /tenants/{tenantId}/calendars/      # Member read, admin write
+├── /tenants/{tenantId}/reservations/   # Member read, owner/admin write
+├── /tenants/{tenantId}/resources/      # Member read, admin write
+├── /tenants/{tenantId}/settings/       # Member read, admin write
+├── /tenants/{tenantId}/analytics/      # Member read, admin write
+└── Legacy collections (deprecated)     # Backward compatibility
+```
 
 ---
 
@@ -189,21 +215,129 @@ firebase deploy
 
 ---
 
-## 📚 Additional Documentation
+## 📊 Firestore Collections & Document Structures
 
-### **Related Files**
-- `README.md` - Setup and usage instructions
-- `DEVELOPMENT_GUIDE.md` - Code style standards and development patterns
-- `functions/package.json` - Dependencies and scripts
-- `firestore.rules` - Detailed security rules
-- `firestore.indexes.json` - Database query indexes
-- `functions/src/models/firestore-types.ts` - TypeScript interfaces
-- `functions/src/services/firestore.service.ts` - Database service layer
+### **Core Collections**
 
-### **External Resources**
-- [Firebase Documentation](https://firebase.google.com/docs)
-- [Cloud Functions Guide](https://firebase.google.com/docs/functions)
-- [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
+#### **Users Collection: `/users/{userId}`**
+```typescript
+{
+  uid: string;              // Firebase Auth UID
+  email: string;            // User's email address
+  displayName: string;      // User's display name
+  tenantId: string;         // Assigned tenant ID
+  roles: string[];          // Array of roles within tenant
+  createdAt: timestamp;     // Account creation date
+  updatedAt: timestamp;     // Last profile update
+}
+```
+
+#### **Tenants Collection: `/tenants/{tenantId}`**
+```typescript
+{
+  id: string;               // Tenant identifier
+  name: string;             // Organization name
+  displayName: string;      // Public display name
+  settings: {               // Tenant-specific settings
+    timezone: string;
+    businessHours: object;
+    features: string[];
+  };
+  createdAt: timestamp;
+  updatedAt: timestamp;
+}
+```
+
+### **Tenant Subcollections**
+
+#### **Calendars: `/tenants/{tenantId}/calendars/{calendarId}`**
+```typescript
+{
+  id: string;               // Calendar identifier
+  tenantId: string;         // Parent tenant ID
+  name: string;             // Calendar display name
+  description: string;      // Calendar description
+  type: string;             // Calendar type (room, equipment, etc.)
+  capacity: number;         // Maximum capacity
+  settings: {
+    allowBookingWindow: number;     // Days in advance
+    minimumDuration: number;        // Minimum booking duration
+    maximumDuration: number;        // Maximum booking duration
+  };
+  active: boolean;          // Whether calendar is active
+  createdAt: timestamp;
+  updatedAt: timestamp;
+}
+```
+
+#### **Reservations: `/tenants/{tenantId}/reservations/{reservationId}`**
+```typescript
+{
+  id: string;               // Reservation identifier
+  tenantId: string;         // Parent tenant ID
+  userId: string;           // User who made the reservation
+  calendarId: string;       // Associated calendar
+  title: string;            // Reservation title
+  description: string;      // Reservation description
+  startTime: timestamp;     // Start date/time
+  endTime: timestamp;       // End date/time
+  status: string;           // 'pending' | 'confirmed' | 'cancelled'
+  attendees: number;        // Number of attendees
+  metadata: object;         // Additional custom fields
+  createdAt: timestamp;
+  updatedAt: timestamp;
+}
+```
+
+#### **Resources: `/tenants/{tenantId}/resources/{resourceId}`**
+```typescript
+{
+  id: string;               // Resource identifier
+  tenantId: string;         // Parent tenant ID
+  name: string;             // Resource name
+  type: string;             // Resource type
+  description: string;      // Resource description
+  availability: object;     // Availability configuration
+  active: boolean;          // Whether resource is active
+  createdAt: timestamp;
+  updatedAt: timestamp;
+}
+```
+
+#### **Settings: `/tenants/{tenantId}/settings/{settingId}`**
+```typescript
+{
+  id: string;               // Setting identifier
+  tenantId: string;         // Parent tenant ID
+  category: string;         // Setting category
+  key: string;              // Setting key
+  value: any;               // Setting value
+  type: string;             // Value type (string, number, boolean, object)
+  updatedAt: timestamp;
+  updatedBy: string;        // User ID who updated
+}
+```
+
+#### **Analytics: `/tenants/{tenantId}/analytics/{analyticsId}`**
+```typescript
+{
+  id: string;               // Analytics record identifier
+  tenantId: string;         // Parent tenant ID
+  eventType: string;        // Type of analytics event
+  data: object;             // Analytics data payload
+  timestamp: timestamp;     // When the event occurred
+  userId?: string;          // Optional user associated with event
+}
+```
+
+### **Legacy Collections (Deprecated)**
+
+These collections maintain backward compatibility during migration:
+
+- `/calendars/{calendarId}` - Legacy calendar documents
+- `/reservations/{reservationId}` - Legacy reservation documents
+
+**Migration Note**: New implementations should use the tenant-based subcollection structure for better isolation and scalability.
 
 ---
 
@@ -221,11 +355,15 @@ firebase deploy
 | 2025-05-29 | Enhanced type definitions to support dynamic reservation type schemas | GitHub Copilot |
 | 2025-06-01 | Added advanced schema configuration documentation | System |
 | 2025-06-01 | Updated createReservation function features | System |
+| 2025-05-30 | **Major Update**: Restructured Firestore security rules for tenant-based subcollections | GitHub Copilot |
+| 2025-05-30 | Updated authentication model from single role to array-based roles system | GitHub Copilot |
+| 2025-05-30 | Implemented hierarchical data structure with tenant-specific subcollections | GitHub Copilot |
+| 2025-05-30 | Added backward compatibility for legacy flat collection structure | GitHub Copilot |
 
 ---
 
-**Last Updated**: June 1, 2025
-**Version**: 1.3.0
+**Last Updated**: May 30, 2025
+**Version**: 2.0.0
 **Maintainer**: Project Team
 
 > 📌 **Remember**: Keep this documentation updated when making architectural changes!
