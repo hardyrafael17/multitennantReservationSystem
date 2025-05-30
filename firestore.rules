@@ -1,89 +1,186 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions for role checking
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function belongsToTenant(tenantId) {
+
+    // Check if user belongs to a specific tenant
+    function isTenantMember(tenantId) {
       return isAuthenticated() && request.auth.token.tenantId == tenantId;
     }
-    
-    function hasRole(role) {
-      return isAuthenticated() && request.auth.token.role == role;
+
+    // Check if user is an admin for a specific tenant
+    function isTenantAdmin(tenantId) {
+      return isTenantMember(tenantId) && 'admin' in request.auth.token.roles;
     }
-    
-    function isAdminOrStaff() {
-      return isAuthenticated() && request.auth.token.role in ['admin', 'staff'];
+
+    // Check if user is the owner of a resource
+    function isResourceOwner(resource) {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
     }
-    
-    // Tenants collection - only accessible by tenant admins and staff
-    match /tenants/{tenantId} {
-      allow read: if belongsToTenant(tenantId);
-      allow write: if belongsToTenant(tenantId) && isAdminOrStaff();
-    }
-    
-    // Calendars collection - tenant-scoped access with role restrictions
-    match /calendars/{calendarId} {
-      allow read: if isAuthenticated() && 
-                     resource.data.tenantId == request.auth.token.tenantId;
-      allow create: if isAuthenticated() && 
-                       request.resource.data.tenantId == request.auth.token.tenantId &&
-                       isAdminOrStaff();
-      allow update, delete: if isAuthenticated() && 
-                              resource.data.tenantId == request.auth.token.tenantId &&
-                              isAdminOrStaff();
-    }
-    
-    // Reservations collection - tenant-scoped with user and role restrictions
-    match /reservations/{reservationId} {
-      allow read: if isAuthenticated() && 
-                     resource.data.tenantId == request.auth.token.tenantId;
-      
-      allow create: if isAuthenticated() && 
-                       request.resource.data.tenantId == request.auth.token.tenantId &&
-                       request.resource.data.userId == request.auth.uid;
-      
-      allow update: if isAuthenticated() && 
-                       resource.data.tenantId == request.auth.token.tenantId &&
-                       (
-                         // Users can update their own reservations (limited fields)
-                         (resource.data.userId == request.auth.uid && 
-                          onlyUpdating(['details', 'status']) &&
-                          request.resource.data.status in ['pending', 'cancelled']) ||
-                         // Staff and admins can update any reservation
-                         isAdminOrStaff()
-                       );
-      
-      allow delete: if isAuthenticated() && 
-                       resource.data.tenantId == request.auth.token.tenantId &&
-                       (resource.data.userId == request.auth.uid || isAdminOrStaff());
-    }
-    
-    // Users collection - self-access and tenant admin access
-    match /users/{userId} {
-      allow read: if isAuthenticated() && 
-                     (request.auth.uid == userId || 
-                      (resource.data.tenantId == request.auth.token.tenantId && isAdminOrStaff()));
-      
-      allow create: if isAuthenticated() && 
-                       request.auth.uid == userId &&
-                       request.resource.data.tenantId == request.auth.token.tenantId;
-      
-      allow update: if isAuthenticated() && 
-                       (request.auth.uid == userId ||
-                        (resource.data.tenantId == request.auth.token.tenantId && hasRole('admin')));
-      
-      allow delete: if isAuthenticated() && 
-                       resource.data.tenantId == request.auth.token.tenantId && 
-                       hasRole('admin');
-    }
-    
+
     // Helper function to check if only specific fields are being updated
     function onlyUpdating(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // ============================================
+    // USERS COLLECTION: /users/{userId}
+    // ============================================
+
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+
+      // Users can create their own profile
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == userId &&
+                       request.resource.data.uid == userId;
+
+      // Users can update their own profile
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+
+      // Delete is generally disallowed for security
+      allow delete: if false;
+    }
+
+    // ============================================
+    // TENANTS COLLECTION: /tenants/{tenantId}
+    // ============================================
+
+    match /tenants/{tenantId} {
+      // Allow read if user is a member of the tenant
+      allow read: if isTenantMember(tenantId);
+
+      // Tenant creation is typically disallowed from client-side
+      allow create: if false;
+
+      // Only tenant admins can update tenant information
+      allow update: if isTenantAdmin(tenantId);
+
+      // Tenant deletion is disallowed from client-side
+      allow delete: if false;
+    }
+
+    // ============================================
+    // TENANT SUBCOLLECTIONS
+    // ============================================
+
+    // Calendars subcollection: /tenants/{tenantId}/calendars/{calendarId}
+    match /tenants/{tenantId}/calendars/{calendarId} {
+      // All tenant members can read calendars
+      allow read: if isTenantMember(tenantId);
+
+      // Only tenant admins can create calendars
+      allow create: if isTenantAdmin(tenantId) &&
+                       request.resource.data.tenantId == tenantId;
+
+      // Only tenant admins can update calendars
+      allow update: if isTenantAdmin(tenantId);
+
+      // Only tenant admins can delete calendars
+      allow delete: if isTenantAdmin(tenantId);
+    }
+
+    // Reservations subcollection: /tenants/{tenantId}/reservations/{reservationId}
+    match /tenants/{tenantId}/reservations/{reservationId} {
+      // All tenant members can read reservations
+      allow read: if isTenantMember(tenantId);
+
+      // Tenant members can create reservations for themselves
+      allow create: if isTenantMember(tenantId) &&
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.tenantId == tenantId;
+
+      // Tenant admins can update any reservation,
+      // or users can update their own reservations
+      allow update: if isTenantAdmin(tenantId) ||
+                       (isResourceOwner(resource) && isTenantMember(tenantId));
+
+      // Tenant admins can delete any reservation,
+      // or users can delete their own reservations
+      allow delete: if isTenantAdmin(tenantId) ||
+                       (isResourceOwner(resource) && isTenantMember(tenantId));
+    }
+
+    // ============================================
+    // GENERAL FALLBACK FOR OTHER TENANT SUBCOLLECTIONS
+    // Pattern: /tenants/{tenantId}/{subCollection}/{docId}
+    // ============================================
+
+    // Resources subcollection: /tenants/{tenantId}/resources/{resourceId}
+    match /tenants/{tenantId}/resources/{resourceId} {
+      allow read: if isTenantMember(tenantId);
+      allow write: if isTenantAdmin(tenantId);
+    }
+
+    // Settings subcollection: /tenants/{tenantId}/settings/{settingId}
+    match /tenants/{tenantId}/settings/{settingId} {
+      allow read: if isTenantMember(tenantId);
+      allow write: if isTenantAdmin(tenantId);
+    }
+
+    // Analytics subcollection: /tenants/{tenantId}/analytics/{analyticsId}
+    match /tenants/{tenantId}/analytics/{analyticsId} {
+      allow read: if isTenantMember(tenantId);
+      allow write: if isTenantAdmin(tenantId);
+    }
+
+    // Generic fallback for any other tenant subcollections
+    // This provides a secure default for new subcollections
+    match /tenants/{tenantId}/{subCollection}/{docId} {
+      allow read: if isTenantMember(tenantId);
+      allow write: if isTenantAdmin(tenantId);
+    }
+
+    // ============================================
+    // LEGACY COLLECTIONS (for backward compatibility)
+    // These rules maintain compatibility with existing flat structure
+    // ============================================
+
+    // Legacy calendars collection - tenant-scoped access with role restrictions
+    match /calendars/{calendarId} {
+      allow read: if isAuthenticated() &&
+                     resource.data.tenantId == request.auth.token.tenantId;
+      allow create: if isAuthenticated() &&
+                       request.resource.data.tenantId == request.auth.token.tenantId &&
+                       'admin' in request.auth.token.roles;
+      allow update, delete: if isAuthenticated() &&
+                              resource.data.tenantId == request.auth.token.tenantId &&
+                              'admin' in request.auth.token.roles;
+    }
+
+    // Legacy reservations collection - tenant-scoped with user and role restrictions
+    match /reservations/{reservationId} {
+      allow read: if isAuthenticated() &&
+                     resource.data.tenantId == request.auth.token.tenantId;
+
+      allow create: if isAuthenticated() &&
+                       request.resource.data.tenantId == request.auth.token.tenantId &&
+                       request.resource.data.userId == request.auth.uid;
+
+      allow update: if isAuthenticated() &&
+                       resource.data.tenantId == request.auth.token.tenantId &&
+                       (
+                         // Users can update their own reservations (limited fields)
+                         (resource.data.userId == request.auth.uid &&
+                          onlyUpdating(['details', 'status']) &&
+                          request.resource.data.status in ['pending', 'cancelled']) ||
+                         // Admins can update any reservation
+                         'admin' in request.auth.token.roles
+                       );
+
+      allow delete: if isAuthenticated() &&
+                       resource.data.tenantId == request.auth.token.tenantId &&
+                       (resource.data.userId == request.auth.uid ||
+                        'admin' in request.auth.token.roles);
     }
   }
 }
