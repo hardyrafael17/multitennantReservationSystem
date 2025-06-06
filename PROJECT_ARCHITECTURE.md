@@ -82,22 +82,20 @@ multitennantReservationSystem/
 ## 🏛️ Architecture Patterns
 
 ### **Multi-Tenancy Model**
-- **Tenant Isolation**: Each tenant's data is logically separated
+- **Tenant Isolation**: Each tenant's data is logically separated using tenantId fields
 - **Shared Infrastructure**: All tenants use the same Firebase project
-- **Row-Level Security**: Firestore rules enforce tenant boundaries
+- **Row-Level Security**: Firestore rules enforce tenant boundaries through tenantId validation
 
 ### **Data Architecture**
 ```
-Firestore Database Structure:
+Firestore Database Structure (Current Implementation):
 ├── tenants/{tenantId}                           # Tenant organizations
-│   ├── calendars/{calendarId}                   # Tenant-specific calendars
-│   ├── reservations/{reservationId}             # Tenant-specific reservations
-│   ├── resources/{resourceId}                   # Tenant-specific resources
-│   ├── settings/{settingId}                     # Tenant-specific settings
-│   └── analytics/{analyticsId}                  # Tenant-specific analytics
-├── users/{userId}                               # User profiles
-├── calendars/{calendarId}                       # Legacy: Global calendars (deprecated)
-└── reservations/{reservationId}                 # Legacy: Global reservations (deprecated)
+├── calendars/{calendarId}                       # Calendars with tenantId field
+├── reservations/{reservationId}                 # Reservations with tenantId field
+└── users/{userId}                               # User profiles with tenantId field
+
+Note: Uses flat collection structure with tenantId-based filtering,
+not hierarchical subcollections as originally planned.
 ```
 
 ### **Security Architecture**
@@ -198,10 +196,10 @@ Collection Rules:
 ### **Development Workflow**
 1. Make code changes
 2. Update this architecture file if structure changes
-3. Test locally with Firebase emulators
-4. Deploy to staging environment
+3. Test locally with Firebase emulators (`firebase emulators:start`)
+4. Deploy to staging environment (if configured)
 5. Test integration
-6. Deploy to production
+6. Deploy to production (`firebase deploy`)
 
 ---
 
@@ -231,156 +229,173 @@ firebase deploy
 
 ## 📊 Firestore Collections & Document Structures
 
-### **Core Collections**
+### **Current Implementation (Flat Structure)**
 
-#### **Users Collection: `/users/{userId}`**
-```typescript
-{
-  uid: string;              // Firebase Auth UID
-  email: string;            // User's email address
-  displayName: string;      // User's display name
-  tenantId: string;         // Assigned tenant ID
-  roles: string[];          // Array of roles within tenant
-  createdAt: timestamp;     // Account creation date
-  updatedAt: timestamp;     // Last profile update
-}
-```
+The project currently uses a flat collection structure with tenant isolation enforced through `tenantId` fields and Firestore security rules.
 
 #### **Tenants Collection: `/tenants/{tenantId}`**
 ```typescript
 {
-  id: string;               // Tenant identifier
-  name: string;             // Organization name
-  displayName: string;      // Public display name
-  settings: {               // Tenant-specific settings
+  name: string;                    // Display name of the tenant organization
+  domain: string;                  // Domain for tenant identification
+  schemaConfig: {
+    reservationTypes: Record<string, ReservationTypeSchema>; // Dynamic reservation types
+    reservationFields?: string[];  // Legacy fields for backward compatibility
+    requiresApproval?: boolean;     // Legacy approval setting
+  };
+  status: "active" | "suspended" | "pending";
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  settings?: {                     // Optional tenant-specific settings
+    timeZone: string;
+    businessHours: { start: string; end: string; };
+    maxAdvanceBooking: number;
+  };
+}
+```
+
+#### **Calendars Collection: `/calendars/{calendarId}`**
+```typescript
+{
+  tenantId: string;                // Foreign key to tenants collection
+  name: string;                    // Calendar display name
+  description?: string;            // Optional calendar description
+  reservationTypeKey?: string;     // Default reservation type for this calendar
+  availability: {
+    [weekday: string]: {           // "monday", "tuesday", etc.
+      start: string;               // Start time "09:00"
+      end: string;                 // End time "17:00"
+      breaks?: Array<{start: string; end: string; name: string;}>;
+    };
+  };
+  slotDuration: number;            // Booking slot duration in minutes
+  bufferTime?: number;             // Buffer time between bookings
+  maxConcurrentBookings: number;   // Maximum simultaneous bookings
+  isActive: boolean;               // Whether calendar accepts new bookings
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  bookingRules?: {                 // Optional booking constraints
+    minAdvanceNotice: number;
+    maxBookingDuration: number;
+    allowWeekends: boolean;
+  };
+}
+```
+
+#### **Reservations Collection: `/reservations/{reservationId}`**
+```typescript
+{
+  tenantId: string;                // Foreign key to tenants collection
+  calendarId: string;              // Foreign key to calendars collection
+  reservationTypeKey: string;      // Key identifying the reservation type schema
+  start: Timestamp;                // Reservation start time
+  end: Timestamp;                  // Reservation end time
+  userId: string;                  // ID of user who made the reservation
+  // Dynamic details based on tenant's schemaConfig.reservationTypes[reservationTypeKey].fields
+  details: Record<string, string | number | boolean>;
+  status: "pending" | "confirmed" | "cancelled" | "completed" | "no-show";
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  approvedBy?: string;             // User ID who approved (if requiresApproval is true)
+  approvedAt?: Timestamp;          // When reservation was approved
+  cancellationReason?: string;     // Reason for cancellation
+  notes?: string;                  // Additional notes from staff
+  metadata?: {                     // System metadata
+    source: "web" | "api" | "admin";
+    ipAddress?: string;
+    userAgent?: string;
+  };
+}
+```
+
+#### **Users Collection: `/users/{userId}`**
+```typescript
+{
+  email: string;                   // User's email address
+  displayName: string;             // User's display name
+  tenantId: string;                // Associated tenant
+  role: "admin" | "staff" | "user"; // User role within tenant
+  createdAt: Timestamp;
+  lastLoginAt?: Timestamp;
+  isActive: boolean;
+  preferences?: {
     timezone: string;
-    businessHours: object;
-    features: string[];
+    notifications: {email: boolean; sms: boolean;};
   };
-  createdAt: timestamp;
-  updatedAt: timestamp;
 }
 ```
 
-### **Tenant Subcollections**
+### **Dynamic Schema System**
 
-#### **Calendars: `/tenants/{tenantId}/calendars/{calendarId}`**
+The project implements a sophisticated dynamic schema system for flexible reservation types:
+
+#### **Schema Field Definition**
 ```typescript
 {
-  id: string;               // Calendar identifier
-  tenantId: string;         // Parent tenant ID
-  name: string;             // Calendar display name
-  description: string;      // Calendar description
-  type: string;             // Calendar type (room, equipment, etc.)
-  capacity: number;         // Maximum capacity
-  settings: {
-    allowBookingWindow: number;     // Days in advance
-    minimumDuration: number;        // Minimum booking duration
-    maximumDuration: number;        // Maximum booking duration
-  };
-  active: boolean;          // Whether calendar is active
-  createdAt: timestamp;
-  updatedAt: timestamp;
+  name: string;                    // Field name
+  type: "string" | "number" | "boolean" | "array" | "object";
+  required: boolean;               // Whether field is required
+  options?: string[];              // Allowed values for the field
+  min?: number;                    // Minimum value (for numbers)
+  max?: number;                    // Maximum value (for numbers)
+  label?: string;                  // Display label for the field
+  placeholder?: string;            // Placeholder text for UI
 }
 ```
 
-#### **Reservations: `/tenants/{tenantId}/reservations/{reservationId}`**
+#### **Reservation Type Schema**
 ```typescript
 {
-  id: string;               // Reservation identifier
-  tenantId: string;         // Parent tenant ID
-  userId: string;           // User who made the reservation
-  calendarId: string;       // Associated calendar
-  title: string;            // Reservation title
-  description: string;      // Reservation description
-  startTime: timestamp;     // Start date/time
-  endTime: timestamp;       // End date/time
-  status: string;           // 'pending' | 'confirmed' | 'cancelled'
-  attendees: number;        // Number of attendees
-  metadata: object;         // Additional custom fields
-  createdAt: timestamp;
-  updatedAt: timestamp;
+  fields: SchemaFieldDefinition[]; // Dynamic field definitions
+  requiresApproval: boolean;       // Whether this reservation type needs approval
+  name?: string;                   // Display name for this reservation type
+  description?: string;            // Description of this reservation type
 }
 ```
 
-#### **Resources: `/tenants/{tenantId}/resources/{resourceId}`**
-```typescript
-{
-  id: string;               // Resource identifier
-  tenantId: string;         // Parent tenant ID
-  name: string;             // Resource name
-  type: string;             // Resource type
-  description: string;      // Resource description
-  availability: object;     // Availability configuration
-  active: boolean;          // Whether resource is active
-  createdAt: timestamp;
-  updatedAt: timestamp;
-}
-```
+### **Security Model Notes**
 
-#### **Settings: `/tenants/{tenantId}/settings/{settingId}`**
-```typescript
-{
-  id: string;               // Setting identifier
-  tenantId: string;         // Parent tenant ID
-  category: string;         // Setting category
-  key: string;              // Setting key
-  value: any;               // Setting value
-  type: string;             // Value type (string, number, boolean, object)
-  updatedAt: timestamp;
-  updatedBy: string;        // User ID who updated
-}
-```
-
-#### **Analytics: `/tenants/{tenantId}/analytics/{analyticsId}`**
-```typescript
-{
-  id: string;               // Analytics record identifier
-  tenantId: string;         // Parent tenant ID
-  eventType: string;        // Type of analytics event
-  data: object;             // Analytics data payload
-  timestamp: timestamp;     // When the event occurred
-  userId?: string;          // Optional user associated with event
-}
-```
-
-### **Legacy Collections (Deprecated)**
-
-These collections maintain backward compatibility during migration:
-
-- `/calendars/{calendarId}` - Legacy calendar documents
-- `/reservations/{reservationId}` - Legacy reservation documents
-
-**Migration Note**: New implementations should use the tenant-based subcollection structure for better isolation and scalability.
+- **Tenant Isolation**: All collections use flat structure with `tenantId` field-based filtering
+- **Firestore Rules**: Support both current flat structure and planned hierarchical structure
+- **Custom Claims**: Users have `tenantId` and `roles` (array) in their JWT tokens
+- **Access Control**: Enforced through Firestore security rules based on custom claims
 
 ---
 
 ## 🌐 Frontend Application (Static Website)
 
-The project includes a basic static frontend application located in the `public/` directory at the root of the project.
+The project includes a basic static frontend application located in the `public/` directory.
 
-### Purpose
-- Provides a user interface for user authentication (Google Sign-In).
-- Acts as a starting point for users to interact with the multi-tenant reservation system's backend services.
-- Demonstrates how to obtain and use Firebase ID tokens (including custom claims like `tenantId` and `roles`) for making authenticated API calls to Cloud Functions.
+### Current Implementation
+- **HTML5** structure with Google Sign-In integration
+- **CSS3** basic styling  
+- **JavaScript (ES6+)** using Firebase v9 SDK for authentication
+- **Google Sign-In** authentication flow with custom claims display
 
-### Technology Stack
-- HTML5
-- CSS3
-- JavaScript (ES6+)
-- Firebase SDK (for Authentication and potentially Firestore client-side access in the future)
+### Key Features
+- User authentication with Google OAuth
+- Display of custom JWT claims (`tenantId` and `roles`)
+- Example API calls to Cloud Functions
+- Firebase configuration placeholder for easy setup
+
+### Configuration Required
+The frontend requires Firebase configuration values to be updated in `public/app.js`:
+```javascript
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",              // TODO: Replace
+  authDomain: "gastby-navarenas.firebaseapp.com",
+  projectId: "gastby-navarenas",
+  storageBucket: "gastby-navarenas.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // TODO: Replace
+  appId: "YOUR_APP_ID"                 // TODO: Replace
+};
+```
 
 ### Hosting
-- **Firebase Hosting** is configured and ready to serve the static website from the `public/` directory.
-- Configuration is set up in `firebase.json` with appropriate rewrites for single-page app behavior.
-- Can be tested locally using Firebase emulators (`firebase emulators:start`) at `http://127.0.0.1:5000`.
-- Can be deployed to production using `firebase deploy --only hosting`.
-- Production URL: `https://gastby-navarenas.web.app` (after deployment).
-
-### Key Files
-- `public/index.html`: The main entry point and structure of the application.
-- `public/app.js`: Handles Firebase initialization, authentication logic (Google Sign-In), UI updates based on auth state, and example API calls to backend functions.
-- `public/style.css`: Provides basic styling for the application.
+- **Firebase Hosting** configured in `firebase.json`
+- Local testing: `firebase emulators:start` → `http://127.0.0.1:5000`
+- Production deployment: `firebase deploy --only hosting`
+- Production URL: `https://gastby-navarenas.web.app` (after deployment)
 
 ---
 
@@ -388,25 +403,16 @@ The project includes a basic static frontend application located in the `public/
 
 | Date | Change | Updated By |
 |------|--------|------------|
-| 2025-05-29 | Initial project setup with Firestore and Cloud Functions | System |
-| 2025-05-29 | Added comprehensive Firestore collections and document structures | System |
-| 2025-05-29 | Implemented TypeScript interfaces and service layer | System |
-| 2025-05-29 | Enhanced security rules with role-based access control | System |
-| 2025-05-29 | Added composite indexes for query optimization | System |
-| 2025-05-29 | Updated documentation to match actual codebase and project ID | GitHub Copilot |
-| 2025-05-29 | Implemented createReservation HTTPS Callable function with advanced schema validation | GitHub Copilot |
-| 2025-05-29 | Enhanced type definitions to support dynamic reservation type schemas | GitHub Copilot |
-| 2025-06-01 | Added advanced schema configuration documentation | System |
-| 2025-06-01 | Updated createReservation function features | System |
-| 2025-05-30 | **Major Update**: Restructured Firestore security rules for tenant-based subcollections | GitHub Copilot |
-| 2025-05-30 | Updated authentication model from single role to array-based roles system | GitHub Copilot |
-| 2025-05-30 | Implemented hierarchical data structure with tenant-specific subcollections | GitHub Copilot |
-| 2025-05-30 | Added backward compatibility for legacy flat collection structure | GitHub Copilot |
+| 2025-06-06 | Updated documentation to reflect actual codebase implementation | GitHub Copilot |
+| 2025-06-06 | Corrected data structure from hierarchical to flat collections | GitHub Copilot |
+| 2025-06-06 | Updated available functions list to match current implementation | GitHub Copilot |
+| 2025-06-06 | Fixed schema system documentation with accurate TypeScript interfaces | GitHub Copilot |
+| Previous | Various development and feature additions | System |
 
 ---
 
-**Last Updated**: May 30, 2025
-**Version**: 2.0.0
+**Last Updated**: June 6, 2025  
+**Current Version**: 1.0.0 (Flat collection structure with dynamic schemas)  
 **Maintainer**: Project Team
 
 > 📌 **Remember**: Keep this documentation updated when making architectural changes!

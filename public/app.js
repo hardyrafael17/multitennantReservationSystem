@@ -60,11 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 const idToken = await user.getIdToken(); // Gets the current ID token
 
                 // Determine API base URL (local emulator vs. deployed)
-                // For local emulators: http://127.0.0.1:5001/gastby-navarenas/us-central1/api
-                // For deployed: https://us-central1-gastby-navarenas.cloudfunctions.net/api
-                // The /helloWorld endpoint is defined in functions/src/index.ts as part of the 'api' Express app.
-                const apiUrl = `http://127.0.0.1:5001/gastby-navarenas/us-central1/api/helloWorld`;
-                // const apiUrl = `https://us-central1-gastby-navarenas.cloudfunctions.net/api/helloWorld`; // Uncomment for deployed
+                // For local emulators: http://127.0.0.1:5001/gastby-navarenas/us-central1/helloWorld
+                // For deployed: https://us-central1-gastby-navarenas.cloudfunctions.net/helloWorld
+                const apiUrl = `http://127.0.0.1:5001/gastby-navarenas/us-central1/helloWorld`;
+                // const apiUrl = `https://us-central1-gastby-navarenas.cloudfunctions.net/helloWorld`; // Uncomment for deployed
 
                 console.log(`Calling API: ${apiUrl} with token: ${idToken.substring(0, 20)}...`);
 

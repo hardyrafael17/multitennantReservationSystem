@@ -102,9 +102,9 @@ multitennantReservationSystem/
 
 ## 🔗 Available API Endpoints
 
-When running locally with Firebase emulators:
+When running locally with Firebase emulators (`firebase emulators:start`):
 
-### HTTP Endpoints
+### HTTP Functions
 - `GET /helloWorld` - Health check endpoint
 - `POST /createTenant` - Create new tenant organization
 - `GET /getTenant?tenantId=ID` - Get tenant information
@@ -113,30 +113,32 @@ When running locally with Firebase emulators:
 ### HTTPS Callable Functions
 - `createReservation` - Create new reservation with dynamic validation and schema support
 
+**Base URL (Local)**: `http://127.0.0.1:5001/gastby-navarenas/us-central1/`
+**Base URL (Production)**: `https://us-central1-gastby-navarenas.cloudfunctions.net/`
+
 **Access Pattern**: All endpoints enforce tenant isolation through custom JWT claims (`tenantId` and `roles`).
 
 ## 📋 Key Features (Current Implementation)
 
-- 🏢 **Multi-tenant architecture** with strict data isolation
-- � **Enhanced security model** with array-based roles (`admin`, `staff`, `user`)
-- 📊 **Hierarchical data structure** using tenant-based subcollections
-- �📅 **Calendar/resource management** with tenant-specific access
+- 🏢 **Multi-tenant architecture** with strict data isolation using flat collections
+- 🔒 **Enhanced security model** with array-based roles (`admin`, `staff`, `user`)
+- 📊 **Flat data structure** using `tenantId` field-based filtering
+- 📅 **Calendar/resource management** with tenant-specific access
 - 🗃️ **Firestore database** with comprehensive security rules
 - 🎯 **Tenant-scoped data access** through custom JWT claims
-- � **TypeScript interfaces** and service layer
-- 🔄 **Backward compatibility** with legacy flat structure
-- ⚡ **Dynamic reservation validation** with schema support
+- 💼 **TypeScript interfaces** and service layer
+- ⚡ **Dynamic reservation validation** with sophisticated schema support
+- 🌐 **Static frontend** with Google Sign-In authentication
 
 ### Current Data Structure
 ```
-├── /users/{userId}                               # User profiles
 ├── /tenants/{tenantId}                          # Tenant organizations
-│   ├── /calendars/{calendarId}                  # Tenant calendars
-│   ├── /reservations/{reservationId}            # Tenant reservations
-│   ├── /resources/{resourceId}                  # Tenant resources
-│   ├── /settings/{settingId}                    # Tenant settings
-│   └── /analytics/{analyticsId}                 # Tenant analytics
-└── Legacy collections (deprecated)              # Backward compatibility
+├── /calendars/{calendarId}                      # Calendars with tenantId field
+├── /reservations/{reservationId}                # Reservations with tenantId field
+└── /users/{userId}                              # User profiles with tenantId field
+
+Note: Uses flat collection structure with tenantId-based filtering
+and Firestore security rules for tenant isolation.
 ```
 
 ## 📋 Key Features (Planned)
@@ -200,11 +202,11 @@ For questions about the project:
 - **Firebase Console**: [gastby-navarenas project](https://console.firebase.google.com/project/gastby-navarenas)
 
 ### **Quick Reference**
-- **Current Version**: 2.0.0 (Major restructuring with tenant-based subcollections)
-- **Last Updated**: May 30, 2025
+- **Current Version**: 1.0.0 (Flat collection structure with dynamic schemas)
+- **Last Updated**: June 6, 2025
 - **Node.js**: v22+ required
 - **Firebase CLI**: Latest version recommended
 
 ---
 
-**⚠️ Important**: This project uses a hierarchical multi-tenant structure. Always update `PROJECT_ARCHITECTURE.md` AND `README.md` when making structural changes to ensure documentation stays current!
+**⚠️ Important**: This project uses a flat multi-tenant structure with tenantId-based filtering. Always update `PROJECT_ARCHITECTURE.md` when making structural changes to ensure documentation stays current!
