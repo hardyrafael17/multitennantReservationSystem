@@ -49,11 +49,14 @@ For code style standards, TypeScript patterns, and development best practices, s
 ## 🛠️ Development Commands
 
 ```bash
-# Start Firebase emulators (Firestore + Functions)
+# Start Firebase emulators (Firestore + Functions + Hosting)
 firebase emulators:start
 
 # Deploy functions only
 firebase deploy --only functions
+
+# Deploy hosting only
+firebase deploy --only hosting
 
 # Deploy Firestore rules only
 firebase deploy --only firestore:rules
@@ -63,6 +66,9 @@ firebase deploy
 
 # View logs
 firebase functions:log
+
+# Serve hosting locally (alternative to emulators)
+firebase serve --only hosting
 ```
 
 ## 🏗️ Project Structure
@@ -139,7 +145,7 @@ When running locally with Firebase emulators:
 - 🌐 **Basic static frontend application** (in `public/`) with Google Sign-In
 - 📊 **Analytics dashboard** for tenant insights
 - 🔔 **Notification system** for reservation updates
-- 🏪 **Firebase Hosting** for web application (setup for `public/` directory)
+- 🏪 **Firebase Hosting** configured and ready (serves `public/` directory)
 - 📱 **Mobile-responsive design**
 - 🔄 **Real-time updates** using Firestore listeners
 - 📈 **Advanced reporting** and usage metrics

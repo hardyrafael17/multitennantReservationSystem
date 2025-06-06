@@ -60,10 +60,16 @@ multitennantReservationSystem/
 - **Firebase Cloud Functions** - Serverless backend API
 - **Cloud Firestore** - NoSQL document database
 - **Firebase Authentication** - User authentication & authorization
-- **Firebase Hosting** - Static website hosting (future)
+- **Firebase Hosting** - Static website hosting (configured for `public/` directory)
+
+### **Frontend**
+- **HTML5** - Markup structure
+- **CSS3** - Styling and responsive design
+- **JavaScript (ES6+)** - Client-side logic and Firebase SDK integration
+- **Firebase SDK** - Authentication and API communication
 
 ### **Languages & Frameworks**
-- **TypeScript** - Primary development language
+- **TypeScript** - Primary development language for backend
 - **Node.js** - Runtime environment
 - **ESLint** - Code linting and formatting
 
@@ -110,8 +116,8 @@ Firestore Database Structure:
 ### **Enabled Services**
 - ✅ Cloud Firestore
 - ✅ Cloud Functions
+- ✅ Firebase Hosting (configured for `public/` directory)
 - ✅ Firebase Authentication (to be configured)
-- 🔲 Firebase Hosting (future)
 - 🔲 Firebase Storage (future)
 
 ### **Configuration Files**
@@ -365,8 +371,11 @@ The project includes a basic static frontend application located in the `public/
 - Firebase SDK (for Authentication and potentially Firestore client-side access in the future)
 
 ### Hosting
-- Served by **Firebase Hosting**, configured to use the `public/` directory.
-- Can be tested locally using the Firebase emulators (`firebase emulators:start`).
+- **Firebase Hosting** is configured and ready to serve the static website from the `public/` directory.
+- Configuration is set up in `firebase.json` with appropriate rewrites for single-page app behavior.
+- Can be tested locally using Firebase emulators (`firebase emulators:start`) at `http://127.0.0.1:5000`.
+- Can be deployed to production using `firebase deploy --only hosting`.
+- Production URL: `https://gastby-navarenas.web.app` (after deployment).
 
 ### Key Files
 - `public/index.html`: The main entry point and structure of the application.
