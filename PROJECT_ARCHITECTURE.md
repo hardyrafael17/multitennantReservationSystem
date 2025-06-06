@@ -368,7 +368,7 @@ The project includes a basic static frontend application located in the `public/
 
 ### Current Implementation
 - **HTML5** structure with Google Sign-In integration
-- **CSS3** basic styling  
+- **CSS3** basic styling
 - **JavaScript (ES6+)** using Firebase v9 SDK for authentication
 - **Google Sign-In** authentication flow with custom claims display
 
@@ -411,8 +411,8 @@ const firebaseConfig = {
 
 ---
 
-**Last Updated**: June 6, 2025  
-**Current Version**: 1.0.0 (Flat collection structure with dynamic schemas)  
+**Last Updated**: June 6, 2025
+**Current Version**: 1.0.0 (Flat collection structure with dynamic schemas)
 **Maintainer**: Project Team
 
 > 📌 **Remember**: Keep this documentation updated when making architectural changes!

@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load configuration from environment
     const configLoader = new ConfigLoader();
     let firebaseConfig;
-
+    
     try {
         await configLoader.loadConfig();
         firebaseConfig = configLoader.getFirebaseConfig();

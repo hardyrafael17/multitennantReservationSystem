@@ -1,0 +1,12 @@
+// Configuration file - DO NOT COMMIT THIS FILE TO GIT
+// Create this file based on your .env values
+// This file should be in your .gitignore
+
+export default {
+    FIREBASE_API_KEY: 'your_actual_api_key_here',
+    FIREBASE_AUTH_DOMAIN: 'gastby-navarenas.firebaseapp.com',
+    FIREBASE_PROJECT_ID: 'gastby-navarenas',
+    FIREBASE_STORAGE_BUCKET: 'gastby-navarenas.appspot.com',
+    FIREBASE_MESSAGING_SENDER_ID: 'your_actual_messaging_sender_id_here',
+    FIREBASE_APP_ID: 'your_actual_app_id_here'
+};

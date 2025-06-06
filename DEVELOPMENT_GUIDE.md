@@ -377,7 +377,7 @@ npm run build:watch
 # Run linting
 npm run lint
 
-# Fix auto-fixable linting issues  
+# Fix auto-fixable linting issues
 npm run lint -- --fix
 
 # Start Firebase emulator (from functions directory)
@@ -412,7 +412,7 @@ functions/
 ## Key Points for Development
 
 1. **Always use double quotes** for strings
-2. **No spaces inside braces** for simple objects/imports  
+2. **No spaces inside braces** for simple objects/imports
 3. **Maximum 120 characters per line** (ESLint enforced)
 4. **2-space indentation** (ESLint enforced)
 5. **Avoid `any` type** - ESLint warns, use specific union types
